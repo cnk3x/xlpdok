@@ -72,46 +72,42 @@ func main() {
 }
 
 func newnsRun(ctx context.Context) (err error) {
-	// 创建新的挂载命名空间 (CLONE_NEWNS)，这是关键步骤，它允许我们在不影响宿主机的情况下修改挂载点
-	if err = syscall.Unshare(syscall.CLONE_NEWNS); err != nil {
-		err = fmt.Errorf("failed to create new mount namespace: %v", err)
-		return
-	}
-
-	// 设置挂载传播为私有，防止影响其他命名空间
-	if err = syscall.Mount("", "/", "", syscall.MS_PRIVATE|syscall.MS_REC, ""); err != nil {
-		err = fmt.Errorf("failed to set mount propagation to private: %v", err)
-		return
-	}
-
-	// 重新挂载 /proc 以使 procfs 中的信息反映新的命名空间
-	// 这会使得 /proc/self/cgroup, /proc/mounts 等看起来像在非容器环境中
-	if e := syscall.Mount("none", "/proc", "proc", 0, ""); e != nil {
-		// 如果失败，继续执行，因为有时这并不致命，或者已经在正确的命名空间中
-		slog.WarnContext(ctx, "failed to remount /proc (this might be okay if running outside initial NS)", "err", e)
-	} else {
-		slog.DebugContext(ctx, "successfully remounted /proc in new namespace.")
-	}
-
-	os.Remove("/.dockerenv")
-	os.MkdirAll("/data", 0777)
-	os.MkdirAll("/downloads", 0777)
-	os.MkdirAll("/var/packages/pan-xunlei-com/target/var", 0777)
-
-	// embed.ExtractEmbed("/")
-
 	spkUrl := "file:///tmp/xl.spk"
-	slog.InfoContext(ctx, "download", "spk", spkUrl, "save", DIR_SYNOPKG_PKGDEST)
-	if err = spk.Download(ctx, spkUrl, DIR_SYNOPKG_PKGDEST, false); err != nil {
-		return
-	}
 
-	if err = mockSyno(); err != nil {
-		return
+	for _, f := range []func() error{
+		fileWrite(FILE_SYNO_INFO_CONF, 0666, `platform_name="`+SYNO_PLATFORM+`"`, `synobios="`+SYNO_PLATFORM+`"`, `unique="synology_`+SYNO_PLATFORM+`_`+SYNO_MODEL+`"`),
+		fileWrite(FILE_SYNO_AUTHENTICATE_CGI, 0777, embed.AuthenticateGgi),
+		func() error { return os.RemoveAll("/.dockerenv") },
+		func() error { return os.MkdirAll("/data", 0777) },
+		func() error { return os.MkdirAll("/downloads", 0777) },
+		func() error { return os.MkdirAll("/var/packages/pan-xunlei-com/target/var", 0777) },
+		func() error { return syscall.Unshare(syscall.CLONE_NEWNS) },
+		func() error { return syscall.Mount("", "/", "", syscall.MS_PRIVATE|syscall.MS_REC, "") },
+		func() error { syscall.Mount("none", "/proc", "proc", 0, ""); return nil },
+		downloadSpk(ctx, spkUrl),
+		runas(ctx, 1000, 1000),
+	} {
+		if err = f(); err != nil {
+			return
+		}
 	}
-
-	err = runas(ctx, 1000, 1000, launch)
 	return
+}
+
+func runas(ctx context.Context, uid, gid int) func() error {
+	return func() (err error) {
+		if err = syscall.Setegid(gid); err != nil {
+			return
+		}
+		defer syscall.Setegid(0)
+
+		if err = syscall.Seteuid(uid); err != nil {
+			return
+		}
+		defer syscall.Seteuid(0)
+
+		return launch(ctx)
+	}
 }
 
 func launch(ctx context.Context) (err error) {
@@ -132,20 +128,6 @@ func launch(ctx context.Context) (err error) {
 
 	go mockWeb(ctx, cmd.Env, cancel)
 	return cmd.Wait()
-}
-
-func mockSyno() (err error) {
-	err = fileWrite(FILE_SYNO_INFO_CONF, 0666,
-		fmt.Sprintf(`platform_name=%q`, SYNO_PLATFORM),
-		fmt.Sprintf(`synobios=%q`, SYNO_PLATFORM),
-		fmt.Sprintf(`unique=synology_%s_%s`, SYNO_PLATFORM, SYNO_MODEL),
-	)
-	if err != nil {
-		return
-	}
-
-	err = fileWrite(FILE_SYNO_AUTHENTICATE_CGI, 0777, embed.AuthenticateGgi)
-	return
 }
 
 func mockWeb(ctx context.Context, env []string, onDone func()) (err error) {
@@ -223,46 +205,40 @@ func randText(n int) (s string) {
 	return
 }
 
-func runas(ctx context.Context, uid, gid int, runner func(ctx context.Context) error) (err error) {
-	if err = syscall.Setegid(gid); err != nil {
-		return
-	}
-	defer syscall.Setegid(0)
-
-	if err = syscall.Seteuid(uid); err != nil {
-		return
-	}
-	defer syscall.Seteuid(0)
-
-	return runner(ctx)
-}
-
-func fileWrite[T ~[]byte | ~string](name string, perm fs.FileMode, data ...T) (err error) {
-	var f *os.File
-	if f, err = os.OpenFile(name, os.O_WRONLY|os.O_CREATE|os.O_EXCL, perm); err != nil {
-		if os.IsExist(err) {
-			err = nil
+func fileWrite[T ~[]byte | ~string](name string, perm fs.FileMode, data ...T) func() error {
+	return func() (err error) {
+		var f *os.File
+		if f, err = os.OpenFile(name, os.O_WRONLY|os.O_CREATE|os.O_EXCL, perm); err != nil {
+			if os.IsExist(err) {
+				err = nil
+				return
+			}
 			return
 		}
-		return
-	}
 
-	err = func() (err error) {
-		for i, line := range data {
-			if i > 0 {
-				if _, err = f.Write([]byte("\n")); err != nil {
+		err = func() (err error) {
+			for i, line := range data {
+				if i > 0 {
+					if _, err = f.Write([]byte("\n")); err != nil {
+						return
+					}
+				}
+				if _, err = f.Write([]byte(line)); err != nil {
 					return
 				}
 			}
-			if _, err = f.Write([]byte(line)); err != nil {
-				return
-			}
+			return
+		}()
+
+		if e := f.Close(); e != nil && err == nil {
+			err = e
 		}
 		return
-	}()
-
-	if e := f.Close(); e != nil && err == nil {
-		err = e
 	}
-	return
+}
+
+func downloadSpk(ctx context.Context, spkUrl string) func() error {
+	return func() (err error) {
+		return spk.Download(ctx, spkUrl, DIR_SYNOPKG_PKGDEST, false)
+	}
 }
