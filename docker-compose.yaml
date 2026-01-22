@@ -1,9 +1,9 @@
 services:
     xlpdok:
         build: .
-        container_name: xlpdok
+        container_name: cnk3x/xlpdok
         hostname: fn08
-        image: xlpdok
+        image: ghcr.io/cnk3x/xlpdok:0.1.1-dev-test-20260122-082926
         volumes: [./tmp/cache:/var/packages/pan-xunlei-com, ./tmp/xl.spk:/tmp/xl.spk:ro]
         network_mode: bridge
         ports: [2345:2345]

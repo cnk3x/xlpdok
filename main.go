@@ -62,7 +62,7 @@ func main() {
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 
-	if err := newnsRun(ctx, launch); err != nil {
+	if err := newnsRun(ctx); err != nil {
 		slog.ErrorContext(ctx, "app exited!", "err", err)
 	} else {
 		slog.InfoContext(ctx, "app exited!")
@@ -106,17 +106,17 @@ func newnsRun(ctx context.Context, runner func(ctx context.Context) error) (err 
 		return
 	}
 
-	err = runas(ctx, 1000, 1000, runner)
+	if err = mockSyno(); err != nil {
+		return
+	}
+
+	err = runas(ctx, 1000, 1000, launch)
 	return
 }
 
 func launch(ctx context.Context) (err error) {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
-
-	if err = mockSyno(); err != nil {
-		return
-	}
 
 	cmd := exec.CommandContext(ctx, FILE_PAN_XUNLEI_CLI, "-launcher_listen", "unix://"+SOCK_LAUNCHER_LISTEN, "-pid", FILE_PID, "-update_url", "null")
 	cmd.Dir = DIR_SYNOPKG_WORK
