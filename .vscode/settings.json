@@ -1,4 +1,33 @@
 {
-    "cSpell.words": ["3rdparty", "Cloneflags", "fstype", "geminilake", "KMGTE", "modtime", "newns", "PKGDEST", "PKGNAME", "PKGROOT", "rootfs", "syno", "synobios", "synoinfo", "synoman", "SYNOPKG", "SYNOPLATFORM", "ulikunitz", "webman", "xlpdok"],
-    "go.toolsEnvVars": { "GOOS": "linux" }
+  "cSpell.words": [
+    "3rdparty",
+    "Cloneflags",
+    "fstype",
+    "geminilake",
+    "KMGTE",
+    "mkfile",
+    "modtime",
+    "newns",
+    "NEWPID",
+    "NEWUTS",
+    "NODEV",
+    "NOEXEC",
+    "NOSUID",
+    "PKGDEST",
+    "PKGNAME",
+    "PKGROOT",
+    "rchown",
+    "rootfs",
+    "Setctty",
+    "syno",
+    "synobios",
+    "synoinfo",
+    "synoman",
+    "SYNOPKG",
+    "SYNOPLATFORM",
+    "ulikunitz",
+    "webman",
+    "xlpdok"
+  ],
+  "go.toolsEnvVars": { "GOOS": "linux" }
 }
