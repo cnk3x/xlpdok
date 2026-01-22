@@ -1,12 +1,11 @@
-FROM --platform=${TARGETARCH} ubuntu:focal
+FROM --platform=${TARGETARCH} debian:stable-slim
 ARG TARGETARCH
-ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update \
-    && DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y ca-certificates tzdata \
-    && rm -rf /var/lib/apt/lists/* \
-    && cp -Lr /usr/share/zoneinfo/Asia/Shanghai /etc/localtime \
-    && echo "Asia/Shanghai" >/etc/timezone
+  && DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y ca-certificates tzdata \
+  && rm -rf /var/lib/apt/lists/* \
+  && cp -Lr /usr/share/zoneinfo/Asia/Shanghai /etc/localtime \
+  && echo "Asia/Shanghai" >/etc/timezone
 
 # RUN apt-get update \
 #     && DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y ca-certificates tzdata \
@@ -26,6 +25,6 @@ COPY artifacts/xlpdok-linux-${TARGETARCH} /xlpdok
 CMD [ "/xlpdok" ]
 
 LABEL org.opencontainers.image.authors=cnk3x \
-    org.opencontainers.image.source=https://github.com/cnk3x/xunlei \
-    org.opencontainers.image.description="迅雷远程下载服务(非官方)" \
-    org.opencontainers.image.licenses=MIT
+  org.opencontainers.image.source=https://github.com/cnk3x/xunlei \
+  org.opencontainers.image.description="迅雷远程下载服务(非官方)" \
+  org.opencontainers.image.licenses=MIT
