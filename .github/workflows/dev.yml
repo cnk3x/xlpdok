@@ -51,6 +51,7 @@ jobs:
         run: |
           GOARCH=amd64 go build -v -trimpath -ldflags '-s -w' -o artifacts/xlpdok-linux-amd64 ./
           GOARCH=arm64 go build -v -trimpath -ldflags '-s -w' -o artifacts/xlpdok-linux-arm64 ./
+          chmod +x ./artifacts/*
           ls -lh ./artifacts
         env:
           CGO_ENABLED: 0
