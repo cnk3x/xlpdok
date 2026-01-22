@@ -1,0 +1,11 @@
+services:
+    xlpdok:
+        build: .
+        container_name: xlpdok
+        hostname: fn08
+        image: xlpdok
+        volumes: [./tmp/cache:/var/packages/pan-xunlei-com, ./tmp/xl.spk:/tmp/xl.spk:ro]
+        network_mode: bridge
+        ports: [2345:2345]
+        cap_add: [SYS_ADMIN]
+        security_opt: [apparmor:unconfined]

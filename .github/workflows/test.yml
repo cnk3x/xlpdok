@@ -1,0 +1,88 @@
+name: auto_push
+
+on:
+    workflow_dispatch:
+    push:
+        branches: [main]
+
+jobs:
+    test:
+        runs-on: ubuntu-latest
+        steps:
+            - name: 设置时区
+              run: |
+                  sudo ln -sf /usr/share/zoneinfo/Asia/Chongqing /etc/localtime
+                  echo "Asia/Chongqing" | sudo tee /etc/timezone > /dev/null
+                  echo "系统当前时区：$(cat /etc/timezone)"
+                  echo "系统当前时间：$(date)"
+
+            - name: 检出代码
+              uses: actions/checkout@v6
+              with:
+                  repository: cnk3x/xunlei
+                  ref: "${{ github.ref }}"
+
+            - name: 设置版本
+              id: version
+              run: |
+                  v_xlp=0.1.1-dev
+                  echo "v_xlp=${v_xlp}" >> $GITHUB_OUTPUT
+
+                  v_date=$(date +'%Y%m%d-%H%M%S')
+                  echo "v_date=${v_date}" >> $GITHUB_OUTPUT
+
+                  v_test="${v_xlp}-test-${v_date}"
+                  echo "v_test=${v_test}" >> $GITHUB_OUTPUT
+
+                  echo "v_xlp: ${v_xlp}"
+                  echo "v_date: ${v_date}"
+                  echo "v_test: ${v_test}"
+
+                  build_time=$(date -Is)
+                  echo "build_time=${build_time}" >> $GITHUB_OUTPUT
+                  echo "build_time: ${build_time}"
+
+            - name: 配置环境
+              uses: actions/setup-go@v6
+              with:
+                  go-version: "stable"
+
+            - name: 编译程序
+              run: |
+                  GOARCH=amd64 go build -v -trimpath -ldflags '-s -w' -o artifacts/xlpdok-linux-amd64 ./
+                  GOARCH=arm64 go build -v -trimpath -ldflags '-s -w' -o artifacts/xlpdok-linux-arm64 ./
+                  ls -lh ./artifacts
+              env:
+                  CGO_ENABLED: 0
+                  GOOS: linux
+
+            - name: 设置QEMU
+              uses: docker/setup-qemu-action@v3
+
+            - name: 设置Buildx
+              uses: docker/setup-buildx-action@v3
+
+            - name: 登录GHCR
+              uses: docker/login-action@v3
+              with:
+                  registry: ghcr.io
+                  username: "${{ github.actor }}"
+                  password: "${{ secrets.GH_TOKEN }}"
+
+            - name: 登录DCR
+              uses: docker/login-action@v3
+              with:
+                  username: ${{ secrets.DCR_USER }}
+                  password: ${{ secrets.DCR_TOKEN }}
+
+            - name: 构建推送
+              uses: docker/build-push-action@v5
+              with:
+                  context: .
+                  push: true
+                  platforms: linux/amd64,linux/arm64
+                  tags: |
+                      cnk3x/xlpdok:${{ steps.version.outputs.v_test }}
+                      ghcr.io/cnk3x/xlpdok:${{ steps.version.outputs.v_test }}
+                  cache-from: type=gha
+                  cache-to: type=gha,mode=max

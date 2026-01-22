@@ -1,0 +1,4 @@
+{
+    "cSpell.words": ["3rdparty", "Cloneflags", "geminilake", "KMGTE", "modtime", "newns", "PKGDEST", "PKGNAME", "PKGROOT", "rootfs", "syno", "synobios", "synoinfo", "synoman", "SYNOPKG", "SYNOPLATFORM", "ulikunitz", "webman", "xlpdok"],
+    "go.toolsEnvVars": { "GOOS": "linux" }
+}

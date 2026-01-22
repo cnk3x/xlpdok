@@ -1,0 +1,15 @@
+tmp/
+local/
+.vscode/*
+!.vscode/settings.json
+.idea/
+
+bin/
+/rootfs/
+home.repo
+
+testdata/
+test_data/
+/amd64/
+artifacts/
+/lib
