@@ -71,7 +71,7 @@ func main() {
 	<-ctx.Done()
 }
 
-func newnsRun(ctx context.Context, runner func(ctx context.Context) error) (err error) {
+func newnsRun(ctx context.Context) (err error) {
 	// 创建新的挂载命名空间 (CLONE_NEWNS)，这是关键步骤，它允许我们在不影响宿主机的情况下修改挂载点
 	if err = syscall.Unshare(syscall.CLONE_NEWNS); err != nil {
 		err = fmt.Errorf("failed to create new mount namespace: %v", err)
