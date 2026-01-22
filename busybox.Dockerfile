@@ -22,6 +22,20 @@ COPY artifacts/xlpdok-linux-${TARGETARCH} /xlpdok
 # ARG TARGETARCH
 # COPY --from=0 /rootfs /
 
+ENV SYNOPLATFORM=geminilake \
+  SYNOPKG_PKGNAME=pan-xunlei-com \
+  SYNOPKG_PKGDEST=/var/packages/pan-xunlei-com/target \
+  SYNOPKG_DSM_VERSION_MAJOR=7 \
+  SYNOPKG_DSM_VERSION_MINOR=2 \
+  SYNOPKG_DSM_VERSION_BUILD=64570 \
+  DriveListen=unix:///var/packages/pan-xunlei-com/target/var/pan-xunlei-com.sock \
+  PLATFORM=群晖 \
+  OS_VERSION="geminilake dsm 7.2-64570" \
+  ConfigPath=/data \
+  HOME=/data/.drive \
+  DownloadPATH= \
+  GIN_MODE=release
+
 CMD [ "/xlpdok" ]
 
 LABEL org.opencontainers.image.authors=cnk3x \
