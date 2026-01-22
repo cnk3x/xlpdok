@@ -18,9 +18,6 @@ jobs:
 
       - name: 检出代码
         uses: actions/checkout@v6
-        with:
-          repository: cnk3x/xunlei
-          ref: "${{ github.ref }}"
 
       - name: 设置版本
         id: version
