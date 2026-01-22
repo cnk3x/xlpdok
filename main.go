@@ -77,13 +77,13 @@ func newnsRun(ctx context.Context) (err error) {
 	for _, f := range []func() error{
 		fileWrite(FILE_SYNO_INFO_CONF, 0666, `platform_name="`+SYNO_PLATFORM+`"`, `synobios="`+SYNO_PLATFORM+`"`, `unique="synology_`+SYNO_PLATFORM+`_`+SYNO_MODEL+`"`),
 		fileWrite(FILE_SYNO_AUTHENTICATE_CGI, 0777, embed.AuthenticateGgi),
-		func() error { return os.RemoveAll("/.dockerenv") },
-		func() error { return os.MkdirAll("/data", 0777) },
-		func() error { return os.MkdirAll("/downloads", 0777) },
-		func() error { return os.MkdirAll("/var/packages/pan-xunlei-com/target/var", 0777) },
-		func() error { return syscall.Unshare(syscall.CLONE_NEWNS) },
-		func() error { return syscall.Mount("", "/", "", syscall.MS_PRIVATE|syscall.MS_REC, "") },
-		func() error { syscall.Mount("none", "/proc", "proc", 0, ""); return nil },
+		rmfile("/.dockerenv"),
+		mkdirs("/data", 0777),
+		mkdirs("/downloads", 0777),
+		mkdirs("/var/packages/pan-xunlei-com/target/var", 0777),
+		unshare(syscall.CLONE_NEWNS),
+		mount("", "/", "", syscall.MS_PRIVATE|syscall.MS_REC, ""),
+		mount("none", "/proc", "proc", 0, ""),
 		downloadSpk(ctx, spkUrl),
 		runas(ctx, 1000, 1000),
 	} {
@@ -205,8 +205,28 @@ func randText(n int) (s string) {
 	return
 }
 
+func rmfile(file string) func() error {
+	return func() error {
+		err := os.Remove(file)
+		if os.IsNotExist(err) {
+			err = nil
+		}
+		return err
+	}
+}
+
+func mkdirs(dir string, mode fs.FileMode) func() error {
+	return func() error {
+		return os.MkdirAll(filepath.Dir(dir), mode)
+	}
+}
+
 func fileWrite[T ~[]byte | ~string](name string, perm fs.FileMode, data ...T) func() error {
 	return func() (err error) {
+		if err = os.MkdirAll(filepath.Dir(name), 0777); err != nil {
+			return
+		}
+
 		var f *os.File
 		if f, err = os.OpenFile(name, os.O_WRONLY|os.O_CREATE|os.O_EXCL, perm); err != nil {
 			if os.IsExist(err) {
@@ -240,5 +260,17 @@ func fileWrite[T ~[]byte | ~string](name string, perm fs.FileMode, data ...T) fu
 func downloadSpk(ctx context.Context, spkUrl string) func() error {
 	return func() (err error) {
 		return spk.Download(ctx, spkUrl, DIR_SYNOPKG_PKGDEST, false)
+	}
+}
+
+func unshare(flags int) func() error {
+	return func() (err error) {
+		return syscall.Unshare(flags)
+	}
+}
+
+func mount(source, target, fstype string, flags uintptr, data string) func() error {
+	return func() error {
+		return syscall.Mount(source, target, fstype, flags, data)
 	}
 }
