@@ -76,10 +76,24 @@ jobs:
           username: ${{ secrets.DCR_USER }}
           password: ${{ secrets.DCR_TOKEN }}
 
-      - name: 构建推送
+      - name: debian
         uses: docker/build-push-action@v5
         with:
           context: .
+          docker-file: ./debian.Dockerfile
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: |
+            cnk3x/xlpdok:debian-${{ steps.version.outputs.v_test }}
+            ghcr.io/cnk3x/xlpdok:debian-${{ steps.version.outputs.v_test }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: busybox
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          docker-file: ./busybox.Dockerfile
           push: true
           platforms: linux/amd64,linux/arm64
           tags: |

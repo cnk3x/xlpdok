@@ -25,6 +25,6 @@ COPY artifacts/xlpdok-linux-${TARGETARCH} /xlpdok
 CMD [ "/xlpdok" ]
 
 LABEL org.opencontainers.image.authors=cnk3x \
-  org.opencontainers.image.source=https://github.com/cnk3x/xunlei \
+  org.opencontainers.image.source=https://github.com/cnk3x/xlpdok \
   org.opencontainers.image.description="迅雷远程下载服务(非官方)" \
   org.opencontainers.image.licenses=MIT
